@@ -2,15 +2,17 @@ using LibPeer.Util;
 using LibPeer.Protocols;
 using LibPeer;
 
+using Downlink.Util;
+
 namespace Downlink {
 
     public class DownlinkController : PeerApplication {
 
         private Store store;
-        private DownlinkInstance server;
+        private Instance server;
         private Thread<void> server_thread;
         private ConcurrentHashMap<PublisherKey, PeerGroup> peer_groups = new ConcurrentHashMap<PublisherKey, PeerGroup>((a) => a.hash(), (a, b) => a.compare(b) == 0);
-        private ConcurrentHashMap<Mx2.InstanceReference, DownlinkPeer> peers = new ConcurrentHashMap<Mx2.InstanceReference, DownlinkPeer>((a) => a.hash(), (a, b) => a.compare(b) == 0);
+        private ConcurrentHashMap<Mx2.InstanceReference, Peer> peers = new ConcurrentHashMap<Mx2.InstanceReference, Peer>((a) => a.hash(), (a, b) => a.compare(b) == 0);
         public bool is_mirror { get; private set; }
 
         public DownlinkController(Store store, PublisherKey[] subscriptions, bool mirror_mode = false) {
@@ -18,7 +20,7 @@ namespace Downlink {
             is_mirror = mirror_mode;
             initialise("Downlink");
             foreach (var subscription in subscriptions) {
-                peer_groups.set(subscription, new PeerGroup(subscription));
+                peer_groups.set(subscription, new PeerGroup());
                 if(is_mirror) {
                     information.resource_set.add(get_mirror_resource_identifier(subscription));
                 }
@@ -26,7 +28,7 @@ namespace Downlink {
                     information.resource_set.add(get_comrade_resource_identifier(subscription));
                 }
             }
-            server = new DownlinkInstance(transport, store);
+            server = new Instance(transport, store);
             server_thread = new Thread<void>("Downlink server", run_forever);
         }
 
@@ -56,7 +58,7 @@ namespace Downlink {
                 return;
             }
 
-            var peer = new DownlinkPeer(peer_info.instance_reference);
+            var peer = new Peer(peer_info.instance_reference);
             peer.peer_ready.connect(group.add_mirror);
             peers.set(peer_info.instance_reference, peer);
             inquire(peer_info);
@@ -68,7 +70,7 @@ namespace Downlink {
                 return;
             }
 
-            var peer = new DownlinkPeer(peer_info.instance_reference);
+            var peer = new Peer(peer_info.instance_reference);
             peer.peer_ready.connect(group.add_comrade);
             peers.set(peer_info.instance_reference, peer);
             inquire(peer_info);
@@ -93,7 +95,7 @@ namespace Downlink {
 
         private static Bytes get_comrade_resource_identifier(PublisherKey key) {
             var sum = new Checksum (ChecksumType.SHA256);
-            sum.update (key.key_bytes, key.key_bytes.length);
+            sum.update (key.public_key, key.public_key.length);
             var identifier = new uint8[SHA256_SIZE];
             size_t size = SHA256_SIZE;
             sum.get_digest (identifier, ref size);
@@ -101,14 +103,14 @@ namespace Downlink {
         }
 
         private static Bytes get_mirror_resource_identifier(PublisherKey key) {
-            return new Bytes(key.key_bytes);
+            return new Bytes(key.public_key);
         }
 
         private bool has_key(PublisherKey key) {
             return peer_groups.has_key(key);
         }
 
-        private delegate T PeerCallback<T>(DownlinkPeer peer) throws IOError, Error;
+        private delegate T PeerCallback<T>(Peer peer) throws IOError, Error;
 
         private T try_peers<T>(PublisherKey key, PeerCallback<T> callback) throws IOError, Error {
             var group = peer_groups.get(key);

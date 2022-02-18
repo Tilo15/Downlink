@@ -6,6 +6,7 @@ dependencies = [
     dependency('gio-2.0'),
     dependency('gee-0.8'),
     dependency('libpeer'),
+    dependency('json-glib-1.0'),
     meson.get_compiler('vala').find_library('posix'),
     meson.get_compiler('vala').find_library('uuid', dirs: vapi_dir),
     meson.get_compiler('c').find_library('uuid'),
@@ -17,12 +18,15 @@ dependencies = [
 sources = files('Controller/Controller.vala')
 sources += files('Controller/PeerGroup.vala')
 sources += files('Metadata/AuthTable.vala')
+sources += files('Metadata/MemoryAuthTable.vala')
+sources += files('Metadata/FilesystemAuthTable.vala')
 sources += files('Metadata/File.vala')
 sources += files('Metadata/Folder.vala')
 sources += files('Metadata/Metadata.vala')
 sources += files('Metadata/ResourceIdentifier.vala')
-sources += files('Protocol/DownlinkInstance.vala')
-sources += files('Protocol/DownlinkPeer.vala')
+sources += files('Protocol/Instance.vala')
+sources += files('Protocol/Peer.vala')
+sources += files('Protocol/CommandStatus.vala')
 sources += files('Publishing/PublisherKey.vala')
 sources += files('Publishing/PublishingKey.vala')
 sources += files('Store/Store.vala')
@@ -30,6 +34,7 @@ sources += files('Store/FilesystemStore.vala')
 sources += files('Store/MemoryStore.vala')
 sources += files('Util/Binary.vala')
 sources += files('Util/Encoding.vala')
+sources += files('Util/Hashing.vala')
 
 downlink = shared_library('libdownlink', sources,
     name_prefix: '',

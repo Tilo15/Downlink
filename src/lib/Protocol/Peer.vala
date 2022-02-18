@@ -3,11 +3,13 @@ using LibPeer.Protocols.Stp;
 using LibPeer.Protocols.Stp.Streams;
 using LibPeer.Util;
 
+using Downlink.Util;
+
 namespace Downlink {
 
     public delegate void CommandResponseHandler(DataInputStream stream) throws IOError, Error;
 
-    public class DownlinkPeer : Object {
+    public class Peer : Object {
 
         public InstanceReference instance_reference { get; private set; }
 
@@ -16,7 +18,7 @@ namespace Downlink {
         public bool is_mirror { get; set; }
         public bool is_ready { get; private set; default = false; }
 
-        public signal void peer_ready(DownlinkPeer peer);
+        public signal void peer_ready(Peer peer);
 
         protected CommandStatus issue_command(string command, string arguments, CommandResponseHandler callback) throws IOError, Error requires (is_ready) {
 
@@ -37,7 +39,7 @@ namespace Downlink {
             return CommandStatus.OK;
         }
 
-        public DownlinkPeer(InstanceReference instance_ref) {
+        public Peer(InstanceReference instance_ref) {
             instance_reference = instance_ref;
         }
 
@@ -135,7 +137,7 @@ namespace Downlink {
             });
 
             if(result == CommandStatus.OK) {
-                return new Metadata(meta_data, key);
+                return new Metadata.from_bytes(meta_data, key);
             }
             throw result.to_error();
         }

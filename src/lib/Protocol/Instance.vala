@@ -5,7 +5,7 @@ using LibPeer.Util;
 
 namespace Downlink {
 
-    public class DownlinkInstance : Object {
+    public class Instance : Object {
 
         private Gee.LinkedList<CommandingPeer> commanding_peers = new Gee.LinkedList<CommandingPeer>();
 
@@ -13,7 +13,7 @@ namespace Downlink {
 
         private Store store;
 
-        public DownlinkInstance(StreamTransmissionProtocol transport, Store cache) {
+        public Instance(StreamTransmissionProtocol transport, Store cache) {
             store = cache;
             stp = transport;
         }
