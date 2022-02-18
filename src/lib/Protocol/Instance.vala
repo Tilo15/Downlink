@@ -43,8 +43,9 @@ namespace Downlink {
                         Metadata metadata;
                         if(store.try_read_metadata(out metadata, key)) {
                             peer.reply_stream.put_byte((uint8)CommandStatus.OK);
-                            peer.reply_stream.put_uint32(metadata.raw.length);
-                            peer.reply_stream.write(metadata.raw);
+                            var metadata_bytes = metadata.to_bytes();
+                            peer.reply_stream.put_uint32(metadata_bytes.length);
+                            peer.reply_stream.write(metadata_bytes);
                         }
                         else {
                             peer.reply_stream.put_byte((uint8)CommandStatus.INTERNAL_ERROR);
@@ -73,7 +74,7 @@ namespace Downlink {
                         AuthTable auth_table;
                         if(store.try_read_auth_table(out auth_table, identifier)) {
                             peer.reply_stream.put_byte((uint8)CommandStatus.OK);
-                            peer.reply_stream.put_uint64(auth_table.chunk_count);
+                            peer.reply_stream.put_uint64(auth_table.get_chunk_count());
                             peer.reply_stream.write(auth_table.serialise());
                         }
                         else {

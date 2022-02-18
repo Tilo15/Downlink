@@ -25,6 +25,14 @@ namespace Downlink {
             return Signing.verify(data, public_key);
         }
 
+        public uint hash() {
+            return new Bytes(public_key).hash();
+        }
+
+        public int compare(PublisherKey other) {
+            return new Bytes(public_key).compare(new Bytes(other.public_key));
+        }
+
     }
 
 }

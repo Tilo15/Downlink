@@ -12,13 +12,7 @@ namespace Downlink {
 
         public abstract uint64 get_chunk_count();
 
-        public virtual uint64 chunk_count {
-            get {
-                return get_chunk_count();
-            }
-        }
-
-        public bool verify_chunk_hash(uint8[] data, uint64 chunk_index) {
+        public bool verify_chunk(uint8[] data, uint64 chunk_index) {
             var hash = new Bytes(Sha256Sum.from_data(data));
             return hash.compare(new Bytes(get_chunk_hash(chunk_index))) == 0;
         }

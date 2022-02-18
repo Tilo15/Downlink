@@ -39,7 +39,7 @@ namespace Downlink {
             }
         }
 
-        public Peer get_mirror() {
+        public Peer? get_mirror() {
             lock(mirror_peers) {
                 foreach (var peer in mirror_peers) {
                     if(can_use_mirror(peer)) {
@@ -47,16 +47,18 @@ namespace Downlink {
                     }
                 }
             }
+            return null;
         }
 
-        public Peer get_comrade() {
+        public Peer? get_comrade() {
             lock(comrade_peers) {
                 foreach (var peer in comrade_peers) {
-                    if(can_use_mirror(peer)) {
+                    if(can_use_comrade(peer)) {
                         return peer;
                     }
                 }
             }
+            return null;
         }
 
         public void wait_for_mirror() {
