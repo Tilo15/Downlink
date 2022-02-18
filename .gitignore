@@ -1,0 +1,6 @@
+/lib
+/meson-*
+build.ninja
+compile_commands.json
+test_key
+/test
