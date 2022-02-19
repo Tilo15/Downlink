@@ -5,5 +5,8 @@ add_project_arguments(['--disable-warnings', '--enable-checking','--vapidir', va
 
 
 subdir('lib')
-# subdir('tools')
+
+dependencies += downlink_dep
+
+subdir('tools')
 # subdir('fuse')
