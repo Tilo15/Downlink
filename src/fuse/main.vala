@@ -67,7 +67,6 @@ namespace DownlinkFuse {
     int handle_path(string path, FileHandler handle_file, FolderHandler handle_folder, int not_found_code = -Posix.ENOENT) {
         var parts = path.split("/");
         var mount_name = parts[1];
-        print("Getting mount\n");
         if(mounts.has_key(mount_name)) {
             Metadata metadata;
             print("Tryna get metadata\n");

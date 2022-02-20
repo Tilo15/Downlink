@@ -21,7 +21,6 @@ namespace Downlink {
         public signal void peer_ready(Peer peer);
 
         protected CommandStatus issue_command(string command, string arguments, CommandResponseHandler callback) throws IOError, Error requires (is_ready) {
-            print("Pre lock\n");
             lock(command_stream) {
                 print(@"Issue: $command $arguments\n");
                 command_stream.put_string(@"$command $arguments\n");
@@ -66,6 +65,9 @@ namespace Downlink {
             uint8[] buffer = new uint8[0];
             var result = issue_command("GET", @"$identifier $start $end", s => {
                 buffer = read_exact_bytes_or_eof(s, end-start);
+                if(buffer.length != (end-start)) {
+                    warning(@"Requested $(end-start) but read $(buffer.length)!");
+                }
             });
             if(result == CommandStatus.OK) {
                 return buffer;
@@ -124,7 +126,6 @@ namespace Downlink {
         }
 
         public Metadata get_metadata(PublisherKey key) throws IOError, Error {
-            print("Get metadtat\n");
             var meta_data = new uint8[0];
             var result = issue_command("METADATA", key.identifier, s => {
                 var metadata_size = s.read_uint32();

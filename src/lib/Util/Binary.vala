@@ -34,6 +34,9 @@ namespace Downlink.Util {
                 read_size += last_read;
                 s.write(buffer[0:last_read]);
             }
+            if(last_read == 0) {
+                print("Last read was 0\n");
+            }
         });
     }
 

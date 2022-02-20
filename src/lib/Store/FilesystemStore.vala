@@ -34,10 +34,8 @@ namespace Downlink {
         }
 
         private Metadata? get_fs_metadata (PublisherKey key) throws Error, IOError {
-            print("Get fs metadata\n");
             var file = GLib.File.new_for_path(get_metadata_path(key));
             if(!file.query_exists()) {
-                print(@"File '$(file.get_path())' does not exist\n");
                 return null;
             }
             var stream = file.read();
@@ -82,31 +80,23 @@ namespace Downlink {
 
             var composer = new LibPeer.Util.ByteComposer();
             uint64 position = start;
-            print("Iterating chunks\n");
             foreach (var chunk in chunks) {
-                print(@"position=$position\n");
                 if(chunk.start > position) {
-                    print(@"Reading from fallback\n");
                     var chunk_data = get_resource(position, uint64.min(chunk.start, end));
                     save_chunk(resource, position, chunk_data);
                     position += chunk_data.length;
-                    print(@"position=$position\n");
                     composer.add_byte_array(chunk_data);
                 }
                 if(chunk.end > position && chunk.start <= position) {
-                    print(@"Reading from filesystem between $position and $(uint64.min(end, chunk.end))\n");
                     var chunk_data = chunk.read(position, uint64.min(end, chunk.end));
                     composer.add_byte_array(chunk_data);
                     position += chunk_data.length;
-                    print(@"position=$position\n");
                 }
                 if(position == end) {
                     break;
                 }
             }
-            print(@"position=$position\n");
             if(position < end) {
-                print("Reading final data from fallback\n");
                 var chunk_data = get_resource(position, end);
                 save_chunk(resource, position, chunk_data);
                 position += chunk_data.length;

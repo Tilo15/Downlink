@@ -110,9 +110,15 @@ namespace Downlink {
                     else {
                         uint8[] data;
                         if(store.try_read_resource(out data, identifier, start, end)) {
-                            peer.reply_stream.put_byte((uint8)CommandStatus.OK);
-                            print(@"Sending all $(data.length) bytes read from cache as reply to request asking for $(end - start) bytes.\n");
-                            peer.reply_stream.write(data);
+                            if(data.length != (end - start)) {
+                                warning("Data returned from store was not the length expectd!");
+                                peer.reply_stream.put_byte((uint8)CommandStatus.INTERNAL_ERROR);
+                            }
+                            else {
+                                peer.reply_stream.put_byte((uint8)CommandStatus.OK);
+                                print(@"Sending all $(data.length) bytes read from cache as reply to request asking for $(end - start) bytes.\n");
+                                peer.reply_stream.write(data);
+                            }
                         }
                         else {
                             peer.reply_stream.put_byte((uint8)CommandStatus.INTERNAL_ERROR);
@@ -154,7 +160,6 @@ namespace Downlink {
             command_stream.read_byte();
 
             print(@"Recieve: $(command) $(arguments)\n");
-            print("Yeah\n");
             return new string[] {
                 command,
                 arguments

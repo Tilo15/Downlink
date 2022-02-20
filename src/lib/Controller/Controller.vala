@@ -113,7 +113,6 @@ namespace Downlink {
         private delegate T PeerCallback<T>(Peer peer) throws IOError, Error;
 
         private T try_peers<T>(PublisherKey key, PeerCallback<T> callback) throws IOError, Error {
-            print("Trying peers\n");
             var group = peer_groups.get(key);
             Error err = new IOError.NETWORK_UNREACHABLE("No peers found to service the request.");
             for(var i = 0; i < 5 && i < group.comrade_count(); i++) {
@@ -122,7 +121,6 @@ namespace Downlink {
                 }
                 catch (Error e) { err = e; }
             }
-            print("Waiting for a mirror\n");
             group.wait_for_mirror();
             for(var i = 0; i < group.mirror_count(); i++) {
                 try {
