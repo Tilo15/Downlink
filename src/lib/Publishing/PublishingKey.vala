@@ -20,6 +20,10 @@ namespace Downlink {
             secret_key = base64_decode (parts[1]);
         }
 
+        public string to_string() {
+            return @"$(base64_encode(public_key)).$(base64_encode(secret_key))";
+        }
+
         public uint8[] sign(uint8[] data) {
             return Signing.sign(data, secret_key);
         }
