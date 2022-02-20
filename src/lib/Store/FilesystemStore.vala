@@ -34,8 +34,10 @@ namespace Downlink {
         }
 
         private Metadata? get_fs_metadata (PublisherKey key) throws Error, IOError {
+            print("Get fs metadata\n");
             var file = GLib.File.new_for_path(get_metadata_path(key));
             if(!file.query_exists()) {
+                print(@"File '$(file.get_path())' does not exist\n");
                 return null;
             }
             var stream = file.read();
@@ -45,11 +47,11 @@ namespace Downlink {
             var data = new uint8[size];
             stream.read(data);
             var metadata = new Metadata.from_bytes(data, key);
-            if(metadata.expiry.difference(new DateTime.now_utc()) > 0) {
-                // Expired
-                file.delete();
-                return null;
-            }
+            //  if(metadata.expiry.difference(new DateTime.now_utc()) < 0) {
+            //      // Expired
+            //      file.delete();
+            //      return null;
+            //  }
             return metadata;
         }
 
@@ -80,20 +82,31 @@ namespace Downlink {
 
             var composer = new LibPeer.Util.ByteComposer();
             uint64 position = start;
+            print("Iterating chunks\n");
             foreach (var chunk in chunks) {
+                print(@"position=$position\n");
                 if(chunk.start > position) {
+                    print(@"Reading from fallback\n");
                     var chunk_data = get_resource(position, uint64.min(chunk.start, end));
                     save_chunk(resource, position, chunk_data);
                     position += chunk_data.length;
+                    print(@"position=$position\n");
                     composer.add_byte_array(chunk_data);
                 }
                 if(chunk.end > position && chunk.start <= position) {
+                    print(@"Reading from filesystem between $position and $(uint64.min(end, chunk.end))\n");
                     var chunk_data = chunk.read(position, uint64.min(end, chunk.end));
                     composer.add_byte_array(chunk_data);
                     position += chunk_data.length;
+                    print(@"position=$position\n");
+                }
+                if(position == end) {
+                    break;
                 }
             }
+            print(@"position=$position\n");
             if(position < end) {
+                print("Reading final data from fallback\n");
                 var chunk_data = get_resource(position, end);
                 save_chunk(resource, position, chunk_data);
                 position += chunk_data.length;
@@ -110,9 +123,9 @@ namespace Downlink {
             var authtable = new MemoryAuthTable();
             var size = 0;
             while(true) {
-                var chunk = Util.read_exact_bytes_or_eof(stream, (int)AUTHTABLE_CHUNK_SIZE);
-                authtable.append_chunk_hash_from_data(chunk);
+                var chunk = Util.read_exact_bytes_or_eof(stream, AUTHTABLE_CHUNK_SIZE);
                 if(chunk.length != 0) {
+                    authtable.append_chunk_hash_from_data(chunk);
                     iostream.output_stream.write(chunk);
                 }
                 size += chunk.length;
@@ -144,7 +157,11 @@ namespace Downlink {
             if(file.query_exists()) {
                 return new FilesystemAuthTable(file.open_readwrite());
             }
-            return get_auth_table();
+            ensure_resource_path(resource);
+            var table = get_auth_table();
+            var fs_table = new FilesystemAuthTable(file.create_readwrite(FileCreateFlags.REPLACE_DESTINATION));
+            table.copy_to(fs_table);
+            return fs_table;
         }
 
         private string get_metadata_path(PublisherKey key) {
@@ -221,12 +238,11 @@ namespace Downlink {
                 file_path = path;
             }
 
-            public uint8[] read(uint64 start, uint64 end) throws IOError, Error requires (start >= this.start && end <= this.end) {
+            public uint8[] read(uint64 r_start, uint64 r_end) throws IOError, Error requires (r_start >= start && r_end <= end) {
                 var file = GLib.File.new_for_path(file_path);
                 var stream = file.read();
-                var data = new uint8[end - start];
-                stream.seek((int64)(start - this.start), SeekType.SET);
-                stream.read(data);
+                stream.seek((int64)(r_start - start), SeekType.SET);
+                var data = Util.read_exact_bytes_or_eof(stream, r_end - r_start);
                 return data;
             }
         }

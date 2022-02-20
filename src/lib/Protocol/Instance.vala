@@ -34,20 +34,25 @@ namespace Downlink {
                 var command = peer.get_next_command();
 
                 if(command[0] == "METADATA") {
-
+                    print("Metadata request\n");
                     var key = new PublisherKey.from_string(command[1].split(" ")[0]);
                     if(!store.has_metadata(key)) {
+                        print("We don't have that metadata :(\n");
                         peer.reply_stream.put_byte((uint8)CommandStatus.NO_METADATA);
                     }
                     else {
                         Metadata metadata;
                         if(store.try_read_metadata(out metadata, key)) {
+                            print("Read metadata.\n");
                             peer.reply_stream.put_byte((uint8)CommandStatus.OK);
+                            print("Sending metadata.\n");
                             var metadata_bytes = metadata.to_bytes();
                             peer.reply_stream.put_uint32(metadata_bytes.length);
                             peer.reply_stream.write(metadata_bytes);
+                            print("Metadata sent.\n");
                         }
                         else {
+                            print("Internal error.\n");
                             peer.reply_stream.put_byte((uint8)CommandStatus.INTERNAL_ERROR);
                         }
                     }
@@ -68,20 +73,22 @@ namespace Downlink {
                 }
 
                 else if(command[0] == "AUTH") {
-
+                    print("Read auth table.\n");
                     var identifier = new ResourceIdentifier.from_string(command[1].split(" ")[0]);
                     if(store.has_full_resource(identifier)) {
+                        print("I have the auth table.\n");
                         AuthTable auth_table;
                         if(store.try_read_auth_table(out auth_table, identifier)) {
                             peer.reply_stream.put_byte((uint8)CommandStatus.OK);
-                            peer.reply_stream.put_uint64(auth_table.get_chunk_count());
                             peer.reply_stream.write(auth_table.serialise());
                         }
                         else {
+                            print("Error reading auth table\n");
                             peer.reply_stream.put_byte((uint8)CommandStatus.INTERNAL_ERROR);
                         }
                     }
                     else {
+                        print("I didn't have that auth table\n");
                         peer.reply_stream.put_byte((uint8)CommandStatus.NOT_FOUND);
                     }
 
@@ -104,6 +111,7 @@ namespace Downlink {
                         uint8[] data;
                         if(store.try_read_resource(out data, identifier, start, end)) {
                             peer.reply_stream.put_byte((uint8)CommandStatus.OK);
+                            print(@"Sending all $(data.length) bytes read from cache as reply to request asking for $(end - start) bytes.\n");
                             peer.reply_stream.write(data);
                         }
                         else {
@@ -111,6 +119,9 @@ namespace Downlink {
                         }
                     }
 
+                }
+                else {
+                    peer.reply_stream.put_byte((uint8)CommandStatus.UNRECOGNISED_COMMAND);
                 }
                 
                 peer.reply_stream.flush();
@@ -137,14 +148,13 @@ namespace Downlink {
         public string[] get_next_command() {
             print("Reading command\n");
             
-            var command = command_stream.read_upto("\n", 1, null);
-            print(command);
+            var command = command_stream.read_upto(" ", 1, null);
             command_stream.read_byte();
             var arguments = command_stream.read_upto("\n", 1, null);
             command_stream.read_byte();
 
             print(@"Recieve: $(command) $(arguments)\n");
-
+            print("Yeah\n");
             return new string[] {
                 command,
                 arguments

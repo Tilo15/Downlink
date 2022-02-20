@@ -4,5 +4,6 @@ build.ninja
 compile_commands.json
 test_key
 /test
+/test_local
 /tools
 /fuse

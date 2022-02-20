@@ -21,7 +21,7 @@ namespace Downlink {
         public signal void peer_ready(Peer peer);
 
         protected CommandStatus issue_command(string command, string arguments, CommandResponseHandler callback) throws IOError, Error requires (is_ready) {
-
+            print("Pre lock\n");
             lock(command_stream) {
                 print(@"Issue: $command $arguments\n");
                 command_stream.put_string(@"$command $arguments\n");
@@ -65,9 +65,7 @@ namespace Downlink {
         public uint8[] get_resource_part(ResourceIdentifier identifier, uint64 start, uint64 end) throws IOError, Error {           
             uint8[] buffer = new uint8[0];
             var result = issue_command("GET", @"$identifier $start $end", s => {
-                var actual = s.read_uint64();
-                buffer = new uint8[actual];
-                s.read(buffer);
+                buffer = read_exact_bytes_or_eof(s, end-start);
             });
             if(result == CommandStatus.OK) {
                 return buffer;
@@ -77,11 +75,9 @@ namespace Downlink {
 
         public void get_resource(ResourceIdentifier identifier, Func<Bytes> chunk_handler) throws IOError, Error {
             var result = issue_command("GET", @"$identifier 0 $(identifier.size)", s => {
-                var actual = s.read_uint64();
                 var read = 0;
-                while (read < actual) {
-                    var buffer = new uint8[uint64.min(actual - read, 8192)];
-                    s.read(buffer);
+                while (read < identifier.size) {
+                    var buffer = read_exact_bytes_or_eof(s, uint64.min(identifier.size - read, 8192));
                     chunk_handler(new Bytes(buffer));
                     read += buffer.length;
                 }

@@ -113,6 +113,7 @@ namespace Downlink {
         private delegate T PeerCallback<T>(Peer peer) throws IOError, Error;
 
         private T try_peers<T>(PublisherKey key, PeerCallback<T> callback) throws IOError, Error {
+            print("Trying peers\n");
             var group = peer_groups.get(key);
             Error err = new IOError.NETWORK_UNREACHABLE("No peers found to service the request.");
             for(var i = 0; i < 5 && i < group.comrade_count(); i++) {
@@ -121,6 +122,7 @@ namespace Downlink {
                 }
                 catch (Error e) { err = e; }
             }
+            print("Waiting for a mirror\n");
             group.wait_for_mirror();
             for(var i = 0; i < group.mirror_count(); i++) {
                 try {
@@ -151,8 +153,10 @@ namespace Downlink {
             return store.read_resource(resource, chunk_start, chunk_end, (s, e) => {
                 return try_peers<Bytes>(key, p => {
                     var resource_data = p.get_resource_part(resource, s, e);
-                    for(var i = chunk_start; i < chunk_end; i += AUTHTABLE_CHUNK_SIZE) {
-                        if(!auth_table.verify_chunk(resource_data[i:i+AUTHTABLE_CHUNK_SIZE], (int)(i / AUTHTABLE_CHUNK_SIZE))) {
+                    for(uint64 i = 0; i < (chunk_end - chunk_start); i += AUTHTABLE_CHUNK_SIZE) {
+                        var chunk_index = (chunk_start + i) / AUTHTABLE_CHUNK_SIZE;
+                        print(@"Verifying chunk: i=$i; i+AUTHTABLE_CHUNK_SIZE=$(i+AUTHTABLE_CHUNK_SIZE); resource_data.length=$(resource_data.length); chunk_start=$chunk_start; chunk_end=$chunk_end; chunk_index=$chunk_index\n");
+                        if(!auth_table.verify_chunk(resource_data[i:uint64.min(i+AUTHTABLE_CHUNK_SIZE, resource_data.length)], chunk_index)) {
                             throw new IOError.INVALID_DATA("Verification of resource data against the auth table failed.");
                         }
                     }

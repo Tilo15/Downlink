@@ -9,4 +9,6 @@ subdir('lib')
 dependencies += downlink_dep
 
 subdir('tools')
-# subdir('fuse')
+
+dependencies += dependency('fuse')
+subdir('fuse')

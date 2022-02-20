@@ -62,9 +62,11 @@ namespace Downlink {
         }
 
         public void wait_for_mirror() {
-            mirror_mutex.lock();
-            mirror_cond.wait(mirror_mutex);
-            mirror_mutex.unlock();
+            if(mirror_peers.size == 0) {
+                mirror_mutex.lock();
+                mirror_cond.wait(mirror_mutex);
+                mirror_mutex.unlock();
+            }
         }
 
         private bool can_use_mirror(Peer peer) {

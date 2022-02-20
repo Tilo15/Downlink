@@ -18,6 +18,7 @@ namespace Downlink {
 
         public Metadata.from_bytes(uint8[] data, PublisherKey key) throws Error {
             raw = data.copy();
+            publisher = key;
             var json_data = bytes_to_string(key.verify(raw));
 
             var parser = new Json.Parser();
