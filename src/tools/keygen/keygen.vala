@@ -15,9 +15,15 @@ namespace DownlinkKeygen {
             printerr("Did not create new key: file exists.\n");
             return -2;
         }
-        var dos = new DataOutputStream(file.create(FileCreateFlags.REPLACE_DESTINATION));
-        dos.put_string(@"$key\n");
-        dos.close();
+
+        try {
+            var dos = new DataOutputStream(file.create(FileCreateFlags.REPLACE_DESTINATION));
+            dos.put_string(@"$key\n");
+            dos.close();
+        }
+        catch (Error e) {
+            printerr(@"Error saving key: $(e.message)\n");
+        }
 
         return 0;
 
