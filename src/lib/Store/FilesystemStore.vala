@@ -103,7 +103,7 @@ namespace Downlink {
             return composer.to_byte_array();
         }
 
-        public void add_resource(DataInputStream stream) throws Error, IOError {
+        public ResourceIdentifier add_resource(DataInputStream stream) throws Error, IOError {
             FileIOStream iostream;
             var tempfile = GLib.File.new_tmp("downlink-fsstore-resource-temp-XXXXXX.reschunk", out iostream);
 
@@ -112,7 +112,9 @@ namespace Downlink {
             while(true) {
                 var chunk = Util.read_exact_bytes_or_eof(stream, (int)AUTHTABLE_CHUNK_SIZE);
                 authtable.append_chunk_hash_from_data(chunk);
-                iostream.output_stream.write(chunk);
+                if(chunk.length != 0) {
+                    iostream.output_stream.write(chunk);
+                }
                 size += chunk.length;
                 if(chunk.length < AUTHTABLE_CHUNK_SIZE) {
                     break;
@@ -120,14 +122,21 @@ namespace Downlink {
             }
 
             var identifier = new ResourceIdentifier(authtable, size);
-            var file = GLib.File.new_for_path(get_resource_path(identifier));
+            ensure_resource_path(identifier);
+            var file = GLib.File.new_for_path(@"$(get_resource_path(identifier))/0.$size.reschunk");
+            if(file.query_exists()) {
+                file.delete();
+            }
             tempfile.move(file, FileCopyFlags.ALL_METADATA);
+
             var authtable_file = GLib.File.new_for_path(get_auth_table_path(identifier));
             if(authtable_file.query_exists()) {
                 authtable_file.delete();
             }
-            var fs_authtable = new FilesystemAuthTable(file.create_readwrite(FileCreateFlags.REPLACE_DESTINATION));
+            var fs_authtable = new FilesystemAuthTable(authtable_file.create_readwrite(FileCreateFlags.REPLACE_DESTINATION));
             authtable.copy_to(fs_authtable);
+
+            return identifier;
         }
 
         public AuthTable read_auth_table(ResourceIdentifier resource, ReadAuthTableDelegate? get_auth_table = null) throws Error, IOError {

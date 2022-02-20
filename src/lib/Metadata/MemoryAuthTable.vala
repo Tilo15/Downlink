@@ -4,7 +4,7 @@ namespace Downlink {
 
     public class MemoryAuthTable : AuthTable {
 
-        private Gee.LinkedList<Bytes> table;
+        private Gee.LinkedList<Bytes> table = new Gee.LinkedList<Bytes>();
 
         public override void append_chunk_hash(uint8[] hash) {
             table.add(new Bytes(hash));

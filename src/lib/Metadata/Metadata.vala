@@ -11,8 +11,8 @@ namespace Downlink {
         public DateTime published { get; private set; }
         public Folder root { get; set; }
         
-        public Metadata(string name, DateTime expiry) {
-            root = new Folder(name);
+        public Metadata(DateTime expiry) {
+            root = new Folder("");
             this.expiry = expiry;
         }
 
@@ -47,8 +47,8 @@ namespace Downlink {
         public void publish(PublishingKey key) {
             publisher = key.get_publisher_key();
             var builder = new Json.Builder();
+            published = new DateTime.now_utc();
             to_json(builder);
-
             var generator = new Json.Generator ();
             var root_node = builder.get_root ();
             generator.set_root (root_node);

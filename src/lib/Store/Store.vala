@@ -19,7 +19,7 @@ namespace Downlink {
 
         public abstract uint8[] read_resource(ResourceIdentifier resource, uint64 start, uint64 end, ReadResourceDelegate? get_resource = null) throws Error, IOError;
 
-        public abstract void add_resource(DataInputStream stream) throws IOError, Error ;
+        public abstract ResourceIdentifier add_resource(DataInputStream stream) throws IOError, Error ;
 
         public abstract AuthTable read_auth_table(ResourceIdentifier resource, ReadAuthTableDelegate? get_auth_table = null) throws Error, IOError;
 
