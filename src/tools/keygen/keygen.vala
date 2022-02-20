@@ -23,6 +23,7 @@ namespace DownlinkKeygen {
         }
         catch (Error e) {
             printerr(@"Error saving key: $(e.message)\n");
+            return -3;
         }
 
         return 0;

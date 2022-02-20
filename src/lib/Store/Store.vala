@@ -11,11 +11,15 @@ namespace Downlink {
 
         public abstract Metadata read_metadata(PublisherKey key, ReadMetadataDelegate? get_metadata = null) throws Error, IOError;
 
+        public abstract void add_metadata(Metadata metadata) throws IOError, Error;
+
         public abstract bool has_resource(ResourceIdentifier resource);
 
         public abstract bool has_full_resource(ResourceIdentifier resource);
 
         public abstract uint8[] read_resource(ResourceIdentifier resource, uint64 start, uint64 end, ReadResourceDelegate? get_resource = null) throws Error, IOError;
+
+        public abstract void add_resource(DataInputStream stream) throws IOError, Error ;
 
         public abstract AuthTable read_auth_table(ResourceIdentifier resource, ReadAuthTableDelegate? get_auth_table = null) throws Error, IOError;
 

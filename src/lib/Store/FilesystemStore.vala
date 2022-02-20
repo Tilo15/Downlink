@@ -21,7 +21,16 @@ namespace Downlink {
         }
 
         public Metadata read_metadata(PublisherKey key, ReadMetadataDelegate? get_metadata = null) throws Error, IOError {
-            return get_fs_metadata(key) ?? get_metadata();
+            var metadata = get_fs_metadata(key);
+            if(metadata == null) {
+                metadata = get_metadata();
+                save_metadata(metadata);
+            }
+            return metadata;
+        }
+
+        public void add_metadata(Metadata metadata) throws IOError, Error {
+            save_metadata(metadata);
         }
 
         private Metadata? get_fs_metadata (PublisherKey key) throws Error, IOError {
@@ -94,6 +103,33 @@ namespace Downlink {
             return composer.to_byte_array();
         }
 
+        public void add_resource(DataInputStream stream) throws Error, IOError {
+            FileIOStream iostream;
+            var tempfile = GLib.File.new_tmp("downlink-fsstore-resource-temp-XXXXXX.reschunk", out iostream);
+
+            var authtable = new MemoryAuthTable();
+            var size = 0;
+            while(true) {
+                var chunk = Util.read_exact_bytes_or_eof(stream, (int)AUTHTABLE_CHUNK_SIZE);
+                authtable.append_chunk_hash_from_data(chunk);
+                iostream.output_stream.write(chunk);
+                size += chunk.length;
+                if(chunk.length < AUTHTABLE_CHUNK_SIZE) {
+                    break;
+                }
+            }
+
+            var identifier = new ResourceIdentifier(authtable, size);
+            var file = GLib.File.new_for_path(get_resource_path(identifier));
+            tempfile.move(file, FileCopyFlags.ALL_METADATA);
+            var authtable_file = GLib.File.new_for_path(get_auth_table_path(identifier));
+            if(authtable_file.query_exists()) {
+                authtable_file.delete();
+            }
+            var fs_authtable = new FilesystemAuthTable(file.create_readwrite(FileCreateFlags.REPLACE_DESTINATION));
+            authtable.copy_to(fs_authtable);
+        }
+
         public AuthTable read_auth_table(ResourceIdentifier resource, ReadAuthTableDelegate? get_auth_table = null) throws Error, IOError {
             var file = GLib.File.new_for_path(get_auth_table_path(resource));
             if(file.query_exists()) {
@@ -150,6 +186,18 @@ namespace Downlink {
             }
             var stream = file.create(FileCreateFlags.REPLACE_DESTINATION);
             stream.write(data);
+            stream.flush();
+            stream.close();
+        }
+
+        private void save_metadata(Metadata metadata) throws IOError, Error{
+            var path = get_metadata_path(metadata.publisher);
+            var file = GLib.File.new_for_path(path);
+            if(file.query_exists()) {
+                file.delete();
+            }
+            var stream = file.create(FileCreateFlags.REPLACE_DESTINATION);
+            stream.write(metadata.to_bytes());
             stream.flush();
             stream.close();
         }
