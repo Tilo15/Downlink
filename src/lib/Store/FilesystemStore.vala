@@ -11,14 +11,23 @@ namespace Downlink {
         }
 
         public bool has_metadata(PublisherKey key) {
-            var file = GLib.File.new_for_path(get_metadata_path(key));
-            return file.query_exists();
+            try { 
+                var metadata = get_fs_metadata(key);
+                return metadata != null;
+            }
+            catch {
+                return false;
+            }
         }
 
         public Metadata read_metadata(PublisherKey key, ReadMetadataDelegate? get_metadata = null) throws Error, IOError {
+            return get_fs_metadata(key) ?? get_metadata();
+        }
+
+        private Metadata? get_fs_metadata (PublisherKey key) throws Error, IOError {
             var file = GLib.File.new_for_path(get_metadata_path(key));
             if(!file.query_exists()) {
-                return get_metadata();
+                return null;
             }
             var stream = file.read();
             stream.seek(0, SeekType.END);
@@ -26,7 +35,13 @@ namespace Downlink {
             stream.seek(0, SeekType.SET);
             var data = new uint8[size];
             stream.read(data);
-            return new Metadata.from_bytes(data, key);
+            var metadata = new Metadata.from_bytes(data, key);
+            if(metadata.expiry.difference(new DateTime.now_utc()) > 0) {
+                // Expired
+                file.delete();
+                return null;
+            }
+            return metadata;
         }
 
         public bool has_resource(ResourceIdentifier resource) {
