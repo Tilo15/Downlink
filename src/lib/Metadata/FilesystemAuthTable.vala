@@ -16,7 +16,6 @@ namespace Downlink {
         public override void append_chunk_hash(uint8[] hash) {
             lock(stream) {
                 stream.seek(0, SeekType.END);
-                print(@"Writing hash at position $(stream.tell())\n");
                 stream.output_stream.write(hash);
                 stream.output_stream.flush();
             }

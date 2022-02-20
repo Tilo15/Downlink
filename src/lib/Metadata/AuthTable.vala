@@ -23,7 +23,6 @@ namespace Downlink {
         }
 
         public void copy_to(AuthTable other) {
-            print("Copy\n");
             var count = get_chunk_count();
             for(var i = 0; i < count; i++) {
                 var hash = get_chunk_hash(i);

@@ -127,9 +127,8 @@ namespace Downlink {
             print("Get metadtat\n");
             var meta_data = new uint8[0];
             var result = issue_command("METADATA", key.identifier, s => {
-                var metadata_size = s.read_int32();
-                meta_data = new uint8[metadata_size];
-                s.read(meta_data);
+                var metadata_size = s.read_uint32();
+                meta_data = read_exact_bytes_or_eof(s, metadata_size);
             });
 
             if(result == CommandStatus.OK) {

@@ -7,7 +7,6 @@ namespace Downlink {
         private Gee.LinkedList<Bytes> table = new Gee.LinkedList<Bytes>();
 
         public override void append_chunk_hash(uint8[] hash) {
-            print("Add chunk hash\n");
             table.add(new Bytes(hash));
         }
 
