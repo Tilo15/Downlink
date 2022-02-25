@@ -167,7 +167,7 @@ namespace Downlink {
         }
 
         public bool pending_command {
-            get { return true; }
+            get { return underlying_command_stream.has_unread_data; }
         }
     }
 

@@ -60,17 +60,21 @@ namespace Downlink {
 
         public bool has_full_resource(ResourceIdentifier resource) {
             var file = GLib.File.new_for_path(get_resource_path(resource));
+            print("Has full resource?\n");
             if(file.query_exists()) {
                 var chunks = get_resource_chunks(resource);
                 uint64 position = 0;
                 foreach (var chunk in chunks) {
-                    if(position != chunk.start) {
+                    if(position < chunk.start) {
+                        print("Chunk start is less than chunk start: no\n");
                         return false;
                     }
                     position = chunk.end;
                 }
+                print(@"Maybe, if $position == $(resource.size)\n");
                 return position == resource.size;
             }
+            print("Resource path does not exist: no\n");
             return false;
         }
 
@@ -173,9 +177,9 @@ namespace Downlink {
             return @"$(get_resource_path(resource))/authtable";
         }
 
-        private Gee.LinkedList<ResourceChunk> get_resource_chunks(ResourceIdentifier resource) {
+        private GLib.List<ResourceChunk> get_resource_chunks(ResourceIdentifier resource) {
             var resource_path = get_resource_path(resource);
-            var chunks = new Gee.LinkedList<ResourceChunk>();
+            var chunks = new GLib.List<ResourceChunk>();
             Dir dir;
             try {
                 dir = Dir.open(resource_path);
@@ -187,10 +191,10 @@ namespace Downlink {
             while(null != (filename = dir.read_name())) {
                 var parts = filename.split(".");
                 if(parts.length == 3 && parts[2] == "reschunk") {
-                    chunks.add(new ResourceChunk(@"$resource_path/$filename", uint64.parse(parts[0]), uint64.parse(parts[1])));
+                    chunks.append(new ResourceChunk(@"$resource_path/$filename", uint64.parse(parts[0]), uint64.parse(parts[1])));
                 }
             }
-            chunks.order_by(c => (int)c.start);
+            chunks.sort((a, b) => (int)(a.start - b.start));
             return chunks;
         }
 
