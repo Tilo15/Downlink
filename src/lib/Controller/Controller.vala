@@ -13,6 +13,8 @@ namespace Downlink {
         private Thread<void> server_thread;
         private ConcurrentHashMap<PublisherKey, PeerGroup> peer_groups = new ConcurrentHashMap<PublisherKey, PeerGroup>((a) => a.hash(), (a, b) => a.compare(b) == 0);
         private ConcurrentHashMap<Mx2.InstanceReference, Peer> peers = new ConcurrentHashMap<Mx2.InstanceReference, Peer>((a) => a.hash(), (a, b) => a.compare(b) == 0);
+        private Gee.HashSet<Bytes> resources = new Gee.HashSet<Bytes>(a => a.hash(), (a, b) => a.compare(b) == 0);
+
         public bool is_mirror { get; private set; }
 
         public DownlinkController(Store store, PublisherKey[] subscriptions, bool mirror_mode = false) {
@@ -21,11 +23,13 @@ namespace Downlink {
             initialise("Downlink");
             foreach (var subscription in subscriptions) {
                 peer_groups.set(subscription, new PeerGroup());
-                if(is_mirror) {
-                    information.resource_set.add(get_mirror_resource_identifier(subscription));
-                }
-                else {
-                    information.resource_set.add(get_comrade_resource_identifier(subscription));
+                var res_id = get_mirror_resource_identifier(subscription);
+                resources.add(res_id);
+                search_for_resource_peer(res_id, new Gdp.Challenge(s => {return s;}), subscription.public_key);
+                if(!is_mirror) {
+                    res_id = get_comrade_resource_identifier(subscription);
+                    resources.add(res_id);
+                    search_for_resource_peer(res_id, new Gdp.Challenge(s => {return s;}), subscription.public_key);
                 }
             }
             server = new Instance(transport, store);
@@ -42,38 +46,47 @@ namespace Downlink {
             server_thread.join();
         }
 
-        protected override void on_new_discovery_peer () {
-            foreach (var group in peer_groups) {
-                var peer_group = group.value;
-                find_resource_peer (get_mirror_resource_identifier(group.key)).on_answer.connect(a => contact_mirror(peer_group, a));
-                if(!is_mirror) {
-                    find_resource_peer (get_comrade_resource_identifier(group.key)).on_answer.connect(a => contact_comrade(peer_group, a));
-                }
+        protected override void on_challenge(Bytes resource_identifier, Gdp.Challenge challenge) {
+            if(resources.contains(resource_identifier)) {
+                // TODO make more robust
+                challenge.complete(challenge.challenge_blob);
+            }
+        }
+        
+        protected override void on_query_answer (Gdp.Answer answer) {
+            var key = new PublisherKey(answer.query_summary.private_blob);
+            var mirror_id = get_mirror_resource_identifier(key);
+            var comrade_id = get_comrade_resource_identifier(key);
+            if(mirror_id.compare(answer.query_summary.resource_hash) == 0) {
+                contact_mirror(peer_groups.get(key), answer);
+            }
+            if(comrade_id.compare(answer.query_summary.resource_hash) == 0) {
+                contact_comrade(peer_groups.get(key), answer);
             }
         }
 
-        private void contact_mirror(PeerGroup group, Aip.InstanceInformation peer_info) {
-            if(peers.has_key(peer_info.instance_reference)) {
-                group.add_mirror(peers.get(peer_info.instance_reference));
+        private void contact_mirror(PeerGroup group, Gdp.Answer answer) {
+            if(peers.has_key(answer.instance_reference)) {
+                group.add_mirror(peers.get(answer.instance_reference));
                 return;
             }
 
-            var peer = new Peer(peer_info.instance_reference);
+            var peer = new Peer(answer.instance_reference);
             peer.peer_ready.connect(group.add_mirror);
-            peers.set(peer_info.instance_reference, peer);
-            inquire(peer_info);
+            peers.set(answer.instance_reference, peer);
+            inquire(answer);
         }
 
-        private void contact_comrade(PeerGroup group, Aip.InstanceInformation peer_info) {
-            if(peers.has_key(peer_info.instance_reference)) {
-                group.add_mirror(peers.get(peer_info.instance_reference));
+        private void contact_comrade(PeerGroup group, Gdp.Answer answer) {
+            if(peers.has_key(answer.instance_reference)) {
+                group.add_mirror(peers.get(answer.instance_reference));
                 return;
             }
 
-            var peer = new Peer(peer_info.instance_reference);
+            var peer = new Peer(answer.instance_reference);
             peer.peer_ready.connect(group.add_comrade);
-            peers.set(peer_info.instance_reference, peer);
-            inquire(peer_info);
+            peers.set(answer.instance_reference, peer);
+            inquire(answer);
         }
 
         protected override void on_incoming_stream (Stp.Streams.StpInputStream stream) {
@@ -94,16 +107,11 @@ namespace Downlink {
         }
 
         private static Bytes get_comrade_resource_identifier(PublisherKey key) {
-            var sum = new Checksum (ChecksumType.SHA256);
-            sum.update (key.public_key, key.public_key.length);
-            var identifier = new uint8[SHA256_SIZE];
-            size_t size = SHA256_SIZE;
-            sum.get_digest (identifier, ref size);
-            return new Bytes(identifier);
+            return new Bytes(Sha512Sum.from_data(key.public_key));
         }
 
         private static Bytes get_mirror_resource_identifier(PublisherKey key) {
-            return new Bytes(key.public_key);
+            return new Bytes(Sha512Sum.from_data(Sha512Sum.from_data(key.public_key)));
         }
 
         private bool has_key(PublisherKey key) {
