@@ -3,18 +3,37 @@ using Downlink;
 
 namespace DownlinkFuse {
 
-    const string publisher_key = "VMd5qX21C4tIBQ6pI/Ug94qnqiglyb0Ert4bgz9OCuw=";
-    const string mount_name = "my-downlink";
-    const string cache_location = "test_local";
+    //  const string publisher_key = "VMd5qX21C4tIBQ6pI/Ug94qnqiglyb0Ert4bgz9OCuw=";
+    //  const string mount_name = "my-downlink";
+    //  const string cache_location = "test_local";
 
     static DownlinkController controller;
     static ConcurrentHashMap<string, PublisherKey> mounts;
     static Store store;
 
     static int main(string[] argv) {
-        store = new FilesystemStore(cache_location);
+        var config_path = "/etc/downlink/downlink.config";
+        if(argv.length > 1) {
+            config_path = argv[1];
+            printerr(@"Using $(config_path) as configuration file.\n");
+        }
+
+        DownlinkConfig config;
+        try {
+            config = new DownlinkConfig(config_path);
+        }
+        catch (Error e) {
+            printerr(@"Failed to read configuration: $(e.message)\n");
+            return e.code;
+        }
+
+        store = new FilesystemStore(config.cache_path);
         mounts = new ConcurrentHashMap<string, PublisherKey>();
-        mounts.set(mount_name, new PublisherKey.from_string(publisher_key));
+
+        foreach (var mount in config.mounts) {
+            mounts.set(mount.name, new PublisherKey.from_string(mount.publisher_key));
+        }
+        
         controller = new DownlinkController(store, mounts.values.to_array());
 
         //  printerr("Pre-caching metadata...\n");
@@ -29,8 +48,20 @@ namespace DownlinkFuse {
         ops.getattr = get_attributes;
         ops.readdir = get_dir;
         ops.read = read_file;
+
+        string[] fuse_args = new string[] {argv[0], "-f", config.mount_point};
+        //  if(argv.length > 2) {
+        //      fuse_args = new string[argv.length -1];
+        //      var fi = 0;
+        //      for(int i = 0; i < argv.length; i++) {
+        //          if(i != 1) {
+        //              fuse_args[fi] = argv[i];
+        //          }
+        //          fi++;
+        //      }
+        //  }
     
-        return Fuse.main(argv, ops, null);
+        return Fuse.main(fuse_args, ops, null);
     }
 
     void set_dir_attributes(Posix.Stat* stat, int size) {
