@@ -48,6 +48,7 @@ namespace DownlinkFuse {
         ops.getattr = get_attributes;
         ops.readdir = get_dir;
         ops.read = read_file;
+        ops.getxattr = get_xattr;
 
         string[] fuse_args = new string[] {argv[0], "-f", config.mount_point};
         //  if(argv.length > 2) {
@@ -95,6 +96,7 @@ namespace DownlinkFuse {
 
     delegate int FileHandler(Downlink.File file, Metadata metadata);
     delegate int FolderHandler(Folder folder, Metadata metadata);
+
     int handle_path(string path, FileHandler handle_file, FolderHandler handle_folder, int not_found_code = -Posix.ENOENT) {
         var parts = path.split("/");
         var mount_name = parts[1];
@@ -210,6 +212,51 @@ namespace DownlinkFuse {
                     return -Posix.EISDIR;
                 });
         }
+    }
+
+    static int get_xattr(string path, string name, char* value, size_t size) {
+        print(@"Getxattr: $(path) $(name)\n");
+        if(name == "downlink-remote") {
+            var result = "false".data;
+            if(path.split("/").length > 2) {
+                result = "true".data;
+            }
+            Memory.copy(value, result, int.min(result.length, (int)size));
+            return result.length;
+        }
+
+        if(name == "downlink-cached") {
+            if(path.split("/").length < 3) {
+                return -Posix.ENOTSUP;
+            }
+
+            return handle_path(path, (file, metadata) => {
+                var available = store.bytes_available(file.resource);
+                var result = available.to_string().data;
+                Memory.copy(value, result, int.min(result.length, (int)size));
+                return result.length;
+            },
+            folder => {
+                return -Posix.ENOTSUP;
+            });
+        }
+
+        if(name == "downlink-complete") {
+            if(path.split("/").length < 3) {
+                return -Posix.ENOTSUP;
+            }
+
+            return handle_path(path, (file, metadata) => {
+                var available = store.has_full_resource(file.resource);
+                var result = available.to_string().data;
+                Memory.copy(value, result, int.min(result.length, (int)size));
+                return result.length;
+            },
+            folder => {
+                return -Posix.ENOTSUP;
+            });
+        }
+        return -Posix.ENOTSUP;
     }
 
 }

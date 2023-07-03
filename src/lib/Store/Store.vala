@@ -15,6 +15,8 @@ namespace Downlink {
 
         public abstract bool has_resource(ResourceIdentifier resource);
 
+        public abstract uint64 bytes_available(ResourceIdentifier resource);
+
         public abstract bool has_full_resource(ResourceIdentifier resource);
 
         public abstract uint8[] read_resource(ResourceIdentifier resource, uint64 start, uint64 end, ReadResourceDelegate? get_resource = null) throws Error, IOError;

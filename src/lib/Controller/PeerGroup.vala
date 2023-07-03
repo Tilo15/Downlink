@@ -13,6 +13,7 @@ namespace Downlink {
         private Mutex mirror_mutex = Mutex();
 
         public void add_mirror(Peer peer) {
+            print("Adding mirror\n");
             lock(mirror_peers) {
                 mirror_peers.add(peer);
                 mirror_mutex.lock();

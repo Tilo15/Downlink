@@ -25,10 +25,12 @@ namespace Downlink {
                 peer_groups.set(subscription, new PeerGroup());
                 var res_id = get_mirror_resource_identifier(subscription);
                 resources.add(res_id);
+                print("Finding mirrors\n");
                 search_for_resource_peer(res_id, new Gdp.Challenge(s => {return s;}), subscription.public_key);
                 if(!is_mirror) {
                     res_id = get_comrade_resource_identifier(subscription);
                     resources.add(res_id);
+                    print("Finding comrades\n");
                     search_for_resource_peer(res_id, new Gdp.Challenge(s => {return s;}), subscription.public_key);
                 }
             }
@@ -47,7 +49,9 @@ namespace Downlink {
         }
 
         protected override void on_challenge(Bytes resource_identifier, Gdp.Challenge challenge) {
+            print("Received challenge\n");
             if(resources.contains(resource_identifier)) {
+                print("Challenge accepted 😎\n");
                 // TODO make more robust
                 challenge.complete(challenge.challenge_blob);
             }
@@ -57,15 +61,19 @@ namespace Downlink {
             var key = new PublisherKey(answer.query_summary.private_blob);
             var mirror_id = get_mirror_resource_identifier(key);
             var comrade_id = get_comrade_resource_identifier(key);
+            print("Got query answer\n");
             if(mirror_id.compare(answer.query_summary.resource_hash) == 0) {
+                print("Answer was for mirror\n");
                 contact_mirror(peer_groups.get(key), answer);
             }
             if(comrade_id.compare(answer.query_summary.resource_hash) == 0) {
+                print("Answer was for comrade\n");
                 contact_comrade(peer_groups.get(key), answer);
             }
         }
 
         private void contact_mirror(PeerGroup group, Gdp.Answer answer) {
+            print("Contacting mirror\n");
             if(peers.has_key(answer.instance_reference)) {
                 group.add_mirror(peers.get(answer.instance_reference));
                 return;
@@ -78,6 +86,7 @@ namespace Downlink {
         }
 
         private void contact_comrade(PeerGroup group, Gdp.Answer answer) {
+            print("Contacting comrade\n");
             if(peers.has_key(answer.instance_reference)) {
                 group.add_mirror(peers.get(answer.instance_reference));
                 return;
@@ -121,21 +130,27 @@ namespace Downlink {
         private delegate T PeerCallback<T>(Peer peer) throws IOError, Error;
 
         private T try_peers<T>(PublisherKey key, PeerCallback<T> callback) throws IOError, Error {
+            print("Getting peer groupss\n");
             var group = peer_groups.get(key);
+            print("Got peer groups\n");
             Error err = new IOError.NETWORK_UNREACHABLE("No peers found to service the request.");
+            print("Trying comrades\n");
             for(var i = 0; i < 5 && i < group.comrade_count(); i++) {
                 try {
                     return callback(group.get_comrade());
                 }
                 catch (Error e) { err = e; }
             }
+            print("Waiting for mirror\n");
             group.wait_for_mirror();
+            print("Done waiting\n");
             for(var i = 0; i < group.mirror_count(); i++) {
                 try {
                     return callback(group.get_mirror());
                 }
                 catch (Error e) { err = e; }
             }
+            print("Guess I'll die\n");
             throw err;
         }
 

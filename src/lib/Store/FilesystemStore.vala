@@ -78,6 +78,20 @@ namespace Downlink {
             return false;
         }
 
+        public uint64 bytes_available(ResourceIdentifier resource) {
+            var file = GLib.File.new_for_path(get_resource_path(resource));
+            if(file.query_exists()) {
+                var chunks = get_resource_chunks(resource);
+                uint64 size = 0;
+                foreach (var chunk in chunks) {
+                    size += chunk.end - chunk.start;
+                }
+                return size;
+            }
+
+            return 0;
+        }
+
         public uint8[] read_resource(ResourceIdentifier resource, uint64 start, uint64 end, ReadResourceDelegate? get_resource = null) throws Error, IOError {
             ensure_resource_path(resource);
             var chunks = get_resource_chunks(resource);
