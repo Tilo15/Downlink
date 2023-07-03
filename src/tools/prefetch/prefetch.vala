@@ -15,7 +15,7 @@ namespace DownlinkPrefetch {
 
         if(options.invalid) {
             printerr("Usage: downlink-prefetch <path>\nPrefetches a file from the Downlink network\n");
-            printerr("Additional options:\n\t-p\tprint prefetch progress to stdout.\n\t-r\tprefetch recursively (i.e. for a directory)\n\t-c <size>\tchunk size for prefetching in bytes (default 1048576)\n\n");
+            printerr("Additional options:\n\t-p\tprint prefetch progress to stdout.\n\t-c <size>\tchunk size for prefetching in bytes (default 1048576)\n\n");
             return -1;
         }
 
@@ -125,7 +125,6 @@ namespace DownlinkPrefetch {
         public string file = null;
         public int chunk_size = 1048576;
         public bool show_progress = false;
-        public bool recursive = false;
 
         public bool invalid = false;
 
@@ -142,10 +141,6 @@ namespace DownlinkPrefetch {
                 if(args[i].has_prefix("-")) {
                     if(args[i] == "-p") {
                         show_progress = true;
-                        continue;
-                    }
-                    if(args[i] == "-r") {
-                        recursive = true;
                         continue;
                     }
                     if(args[i] == "-c") {
