@@ -37,7 +37,7 @@ namespace DownlinkPrefetch {
 
         if(file_info.get_attribute_string(DOWNLINK_COMPLETE) == "true") {
             if(options.show_progress) {
-                printerr("The provided path is alreay fully cached locally. Nothing to do.\n");
+                printerr("The provided path is already fully cached locally. Nothing to do.\n");
             }
 
             return 0;
@@ -94,6 +94,7 @@ namespace DownlinkPrefetch {
         var label_size = (cols/2) - 2;
 
         var pbar_fill = (int)((((float)current) / ((float) target)) * pbar_size);
+        var small_edge = ((int)((((float)current) / ((float) target)) * pbar_size * 2) % 2) == 0;
         var percentage = (int)((((float)current) / ((float) target)) * 100);
         var pbar_string = "[";
 
@@ -102,7 +103,12 @@ namespace DownlinkPrefetch {
                 pbar_string += " ";
                 continue;
             }
-            pbar_string += "#";
+            if(i == pbar_fill - 1 && small_edge) {
+                pbar_string += "-";
+            }
+            else {
+                pbar_string += "=";
+            }
         }
         pbar_string += "]";
 
